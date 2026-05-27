@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>品牌諮詢預約｜心惠 Brand Lab</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0d1f3c 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #c9a84c, #f0d78c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        .header p {
+            color: #8899aa;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(201, 168, 76, 0.2);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+        .card-title {
+            font-size: 18px;
+            color: #c9a84c;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .free-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #c9a84c, #f0d78c);
+            color: #0a1628;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .pricing-info {
+            background: rgba(201, 168, 76, 0.1);
+            border: 1px solid rgba(201, 168, 76, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .pricing-info h3 {
+            color: #f0d78c;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .pricing-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .pricing-item:last-child {
+            border-bottom: none;
+        }
+        .pricing-item .label {
+            color: #aabbcc;
+            font-size: 14px;
+        }
+        .pricing-item .price {
+            color: #f0d78c;
+            font-weight: bold;
+        }
+        .pricing-item.highlight {
+            background: rgba(201, 168, 76, 0.1);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 4px -12px;
+        }
+        .pricing-item.highlight .label {
+            color: #f0d78c;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            color: #aabbcc;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .form-group label .required {
+            color: #c9a84c;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: #e8e8e8;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #c9a84c;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .form-group select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23c9a84c' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+        }
+        .form-group select option {
+            background: #1a2a4a;
+            color: #e8e8e8;
+        }
+        .time-slots {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .time-slot {
+            padding: 10px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            color: #aabbcc;
+        }
+        .time-slot:hover {
+            border-color: #c9a84c;
+            color: #f0d78c;
+        }
+        .time-slot.selected {
+            background: rgba(201, 168, 76, 0.2);
+            border-color: #c9a84c;
+            color: #f0d78c;
+        }
+        .time-slot.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #c9a84c, #a88a3a);
+            border: none;
+            border-radius: 12px;
+            color: #0a1628;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 1px;
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(201, 168, 76, 0.3);
+        }
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        .success-message .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .success-message h2 {
+            color: #f0d78c;
+            margin-bottom: 12px;
+        }
+        .success-message p {
+            color: #8899aa;
+            line-height: 1.8;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #556677;
+            font-size: 12px;
+        }
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px 16px;
+            }
+            .card {
+                padding: 24px 20px;
+            }
+            .time-slots {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>品牌諮詢預約</h1>
+            <p>心惠｜品牌靈魂建構所 Hui Brand Lab</p>
+        </div>
+
+        <!-- 價目資訊 -->
+        <div class="pricing-info">
+            <h3>✨ 單次顧問諮詢</h3>
+            <div class="pricing-item highlight">
+                <span class="label">首次諮詢 30 分鐘</span>
+                <span class="price"><span class="free-badge">免費</span></span>
+            </div>
+            <div class="pricing-item">
+                <span class="label">顧問諮詢 1 小時</span>
+                <span class="price">NT$ 6,000</span>
+            </div>
+            <div class="pricing-item">
+                <span class="label">顧問諮詢 2 小時</span>
+                <span class="price">NT$ 10,000</span>
+            </div>
+            <div class="pricing-item">
+                <span class="label">半日顧問 4 小時</span>
+                <span class="price">NT$ 25,000</span>
+            </div>
+            <div class="pricing-item">
+                <span class="label">全日顧問 8 小時</span>
+                <span class="price">NT$ 45,000</span>
+            </div>
+        </div>
+
+        <!-- 預約表單 -->
+        <form id="bookingForm">
+            <div class="card">
+                <div class="card-title">📋 基本資料</div>
+                
+                <div class="form-group">
+                    <label>姓名 <span class="required">*</span></label>
+                    <input type="text" id="name" name="name" required placeholder="請輸入您的姓名">
+                </div>
+
+                <div class="form-group">
+                    <label>電話 <span class="required">*</span></label>
+                    <input type="tel" id="phone" name="phone" required placeholder="例如：0912-345-678">
+                </div>
+
+                <div class="form-group">
+                    <label>Email <span class="required">*</span></label>
+                    <input type="email" id="email" name="email" required placeholder="example@email.com">
+                </div>
+
+                <div class="form-group">
+                    <label>公司 / 品牌名稱</label>
+                    <input type="text" id="company" name="company" placeholder="如果有的話請填寫">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📅 選擇諮詢方案與時間</div>
+
+                <div class="form-group">
+                    <label>諮詢方案 <span class="required">*</span></label>
+                    <select id="plan" name="plan" required>
+                        <option value="">請選擇方案</option>
+                        <option value="free_30min">首次諮詢 30 分鐘（免費）</option>
+                        <option value="1hr">顧問諮詢 1 小時（NT$ 6,000）</option>
+                        <option value="2hr">顧問諮詢 2 小時（NT$ 10,000）</option>
+                        <option value="4hr">半日顧問 4 小時（NT$ 25,000）</option>
+                        <option value="8hr">全日顧問 8 小時（NT$ 45,000）</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>預約日期 <span class="required">*</span></label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label>選擇時段 <span class="required">*</span></label>
+                    <div class="time-slots" id="timeSlots">
+                        <div class="time-slot" data-time="10:00">10:00</div>
+                        <div class="time-slot" data-time="10:30">10:30</div>
+                        <div class="time-slot" data-time="11:00">11:00</div>
+                        <div class="time-slot" data-time="11:30">11:30</div>
+                        <div class="time-slot" data-time="12:00">12:00</div>
+                        <div class="time-slot" data-time="12:30">12:30</div>
+                        <div class="time-slot" data-time="13:00">13:00</div>
+                        <div class="time-slot" data-time="13:30">13:30</div>
+                        <div class="time-slot" data-time="14:00">14:00</div>
+                        <div class="time-slot" data-time="14:30">14:30</div>
+                        <div class="time-slot" data-time="15:00">15:00</div>
+                        <div class="time-slot" data-time="15:30">15:30</div>
+                        <div class="time-slot" data-time="16:00">16:00</div>
+                        <div class="time-slot" data-time="16:30">16:30</div>
+                        <div class="time-slot" data-time="17:00">17:00</div>
+                        <div class="time-slot" data-time="17:30">17:30</div>
+                    </div>
+                    <input type="hidden" id="selectedTime" name="time" required>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">💡 諮詢方向</div>
+
+                <div class="form-group">
+                    <label>您目前的身份 <span class="required">*</span></label>
+                    <select id="identity" name="identity" required>
+                        <option value="">請選擇</option>
+                        <option value="企業主">企業主</option>
+                        <option value="個人品牌經營者">個人品牌經營者</option>
+                        <option value="創業者">創業者（正在創業或準備創業）</option>
+                        <option value="設計師/創作者">設計師 / 創作者</option>
+                        <option value="自媒體經營者">自媒體經營者</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>想諮詢的問題方向 <span class="required">*</span></label>
+                    <textarea id="topic" name="topic" required placeholder="請簡述您想諮詢的問題或方向，例如：&#10;• 品牌定位不夠清晰&#10;• 想了解 AI 如何幫助品牌&#10;• 正在考慮品牌升級&#10;• 想建立個人品牌但不知道從哪開始"></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">確認預約</button>
+        </form>
+
+        <!-- 成功訊息 -->
+        <div class="success-message" id="successMessage">
+            <div class="icon">✨</div>
+            <h2>預約成功</h2>
+            <p>
+                感謝您的預約！<br>
+                我們已收到您的諮詢需求，<br>
+                品牌顧問將會在 24 小時內與您確認時間。<br><br>
+                如有任何問題，歡迎隨時透過 LINE 聯繫心惠 ✨
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>© 2024 心惠｜品牌靈魂建構所 Hui Brand Lab</p>
+        </div>
+    </div>
+
+    <script>
+        // 設定日期選擇器的最小值為明天
+        const dateInput = document.getElementById('date');
+        const today = new Date();
+        today.setDate(today.getDate() + 1);
+        dateInput.min = today.toISOString().split('T')[0];
+        
+        // 限制只能選擇週一到週五
+        dateInput.addEventListener('input', function() {
+            const selected = new Date(this.value);
+            const day = selected.getDay();
+            if (day === 0 || day === 6) {
+                alert('請選擇週一到週五的日期');
+                this.value = '';
+            }
+        });
+
+        // 時段選擇
+        let selectedTime = '';
+        document.querySelectorAll('.time-slot').forEach(slot => {
+            slot.addEventListener('click', function() {
+                if (this.classList.contains('disabled')) return;
+                document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedTime = this.dataset.time;
+                document.getElementById('selectedTime').value = selectedTime;
+            });
+        });
+
+        // 表單提交
+        document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!selectedTime) {
+                alert('請選擇諮詢時段');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '預約中...';
+
+            const formData = {
+                name: document.getElementById('name').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value,
+                company: document.getElementById('company').value,
+                plan: document.getElementById('plan').value,
+                date: document.getElementById('date').value,
+                time: selectedTime,
+                identity: document.getElementById('identity').value,
+                topic: document.getElementById('topic').value,
+            };
+
+            try {
+                const response = await fetch('/api/booking', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('bookingForm').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                } else {
+                    alert(result.message || '預約失敗，請稍後再試');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '確認預約';
+                }
+            } catch (error) {
+                alert('網路錯誤，請稍後再試');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '確認預約';
+            }
+        });
+    </script>
+</body>
+</html>

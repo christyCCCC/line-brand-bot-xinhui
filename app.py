@@ -1,12 +1,17 @@
 """
 LINE AI 品牌建構師「心惠」- 主程式
 心惠｜品牌靈魂建構所 Hui Brand Lab
+含預約諮詢系統
 """
 
 import os
 import json
 import logging
-from flask import Flask, request, abort
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime
+from flask import Flask, request, abort, render_template, jsonify
 
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
@@ -34,9 +39,22 @@ CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
 # OpenAI 設定
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
 
+# Email 設定
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", "christy.com.tw@gmail.com")
+
+# LINE 通知設定 - 管理者的 LINE User ID
+ADMIN_LINE_USER_ID = os.environ.get("ADMIN_LINE_USER_ID", "")
+
 # LINE SDK 設定
 configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
+
+# ===== 預約資料儲存 =====
+bookings = []
 
 # ===== 心惠的系統人設 =====
 SYSTEM_PROMPT = """你是「心惠」，品牌靈魂建構所（Hui Brand Lab）的 AI 品牌顧問。
@@ -69,6 +87,7 @@ SYSTEM_PROMPT = """你是「心惠」，品牌靈魂建構所（Hui Brand Lab）
 5. AI 品牌工具建議
 6. 個人 IP 定位分析
 7. 日常對話與陪伴
+8. 引導客戶預約品牌諮詢
 
 【服務項目介紹】
 ① 品牌方向探索：品牌定位／品牌人格／市場方向分析
@@ -78,9 +97,21 @@ SYSTEM_PROMPT = """你是「心惠」，品牌靈魂建構所（Hui Brand Lab）
 ⑤ 海外品牌拓展：國際市場定位／海外品牌策略
 ⑥ 企業內訓／包班課程：AI 品牌行銷／ChatGPT 商業應用
 
+【單次顧問諮詢價目】
+- 首次諮詢 30 分鐘：免費
+- 顧問諮詢 1 小時：NT$ 6,000（適合初步諮詢、問題釐清、方向建議）
+- 顧問諮詢 2 小時：NT$ 10,000（適合深入問題分析、策略方向建議）
+- 半日顧問 4 小時：NT$ 25,000（適合全面性診斷、策略規劃建議）
+- 全日顧問 8 小時：NT$ 45,000（適合完整問題梳理、深度策略擬定）
+
+【預約相關】
+- 當客戶表達想預約、想諮詢、想了解更多時，提供預約連結
+- 預約連結：{booking_url}
+- 首次諮詢免費 30 分鐘，鼓勵客戶先預約體驗
+
 【客戶常見問題的回答方向】
 Q: 我現在品牌方向很亂，不知道問題出在哪？
-A: 引導客戶先釐清現況，建議可以透過品牌診斷問答來找到方向
+A: 引導客戶先釐清現況，建議可以透過品牌診斷問答來找到方向，或預約免費 30 分鐘諮詢
 
 Q: AI 到底能怎麼幫助我的品牌？
 A: 說明 AI 可以協助品牌策略分析、內容生成、行銷自動化等，並介紹我們的 AI 企業顧問服務
@@ -102,7 +133,8 @@ A: 引導客戶思考自身優勢與市場需求，建議可以透過品牌探�
 - 客戶問什麼就回答什麼，像一個真正的品牌顧問在跟客戶聊天
 - 只有當客戶明確表達想做品牌診斷/分析/問卷時，才引導進入品牌框架問答
 - 回答要有深度但不要太長，控制在 200 字以內（除非客戶問了複雜問題）
-- 用繁體中文回答"""
+- 用繁體中文回答
+- 當客戶表達想預約或想進一步了解時，自然地提供預約連結"""
 
 # ===== 用戶狀態管理 =====
 user_sessions = {}
@@ -111,11 +143,11 @@ user_sessions = {}
 def get_session(user_id):
     if user_id not in user_sessions:
         user_sessions[user_id] = {
-            "state": "chat",  # 預設為聊天模式
+            "state": "chat",
             "step": 0,
             "answers": {},
             "role": None,
-            "history": [],  # 對話歷史
+            "history": [],
         }
     return user_sessions[user_id]
 
@@ -224,7 +256,8 @@ WELCOME_MESSAGE = """您好，我是心惠 ✨
 
 無論您是想聊聊品牌方向、了解我們的服務，或是有任何品牌相關的問題，都歡迎直接跟我說。
 
-如果您想做一次完整的品牌診斷分析，可以隨時告訴我「我想做品牌診斷」，我會引導您完成 ✨"""
+如果您想做一次完整的品牌診斷分析，可以隨時告訴我「品牌診斷」。
+想預約品牌顧問諮詢，可以告訴我「預約」✨"""
 
 ROLE_MAP = {
     "1": "enterprise",
@@ -247,8 +280,14 @@ ROLE_NAMES = {
 # ===== 品牌診斷觸發關鍵字 =====
 DIAGNOSIS_TRIGGERS = [
     "品牌診斷", "品牌分析", "品牌問卷", "開始診斷", "我想做品牌診斷",
-    "品牌探索", "品牌定位", "幫我分析", "品牌健檢", "開始",
+    "品牌探索", "幫我分析", "品牌健檢",
     "start", "重新開始", "重來",
+]
+
+# ===== 預約觸發關鍵字 =====
+BOOKING_TRIGGERS = [
+    "預約", "我要預約", "預約諮詢", "想預約", "booking",
+    "我想預約", "預約時間", "約時間", "想諮詢",
 ]
 
 ROLE_SELECT_MESSAGE = """好的，讓我們開始品牌靈魂探索 ✨
@@ -262,11 +301,20 @@ ROLE_SELECT_MESSAGE = """好的，讓我們開始品牌靈魂探索 ✨
 請輸入 1、2 或 3"""
 
 
+# ===== 取得預約 URL =====
+def get_booking_url():
+    """動態取得預約頁面 URL"""
+    base_url = os.environ.get("RENDER_EXTERNAL_URL", "https://line-brand-bot-xinhui.onrender.com")
+    return f"{base_url}/booking"
+
+
 # ===== AI 聊天函數 =====
 def chat_with_ai(user_text, history):
     """使用 OpenAI 進行自然對話"""
     try:
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        booking_url = get_booking_url()
+        system_prompt = SYSTEM_PROMPT.replace("{booking_url}", booking_url)
+        messages = [{"role": "system", "content": system_prompt}]
 
         # 加入最近的對話歷史（最多保留 10 輪）
         for h in history[-20:]:
@@ -328,7 +376,7 @@ def generate_brand_analysis(role, answers):
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": SYSTEM_PROMPT.replace("{booking_url}", get_booking_url())},
                 {"role": "user", "content": prompt},
             ],
             max_tokens=2500,
@@ -337,7 +385,7 @@ def generate_brand_analysis(role, answers):
         return response.choices[0].message.content
     except Exception as e:
         logger.error(f"OpenAI API error: {e}")
-        return "抱歉，分析過程中遇到了一些問題。請稍後再試，或輸入「開始」重新進行品牌診斷。"
+        return "抱歉，分析過程中遇到了一些問題。請稍後再試，或輸入「品牌診斷」重新進行品牌診斷。"
 
 
 # ===== 分段發送長訊息 =====
@@ -356,6 +404,159 @@ def split_message(text, max_length=4500):
     if current.strip():
         messages.append(current.strip())
     return messages
+
+
+# ===== Email 通知 =====
+def send_email_notification(booking_data):
+    """發送預約通知 Email"""
+    try:
+        if not SMTP_EMAIL or not SMTP_PASSWORD:
+            logger.warning("SMTP not configured, skipping email notification")
+            return False
+
+        plan_names = {
+            "free_30min": "首次諮詢 30 分鐘（免費）",
+            "1hr": "顧問諮詢 1 小時（NT$ 6,000）",
+            "2hr": "顧問諮詢 2 小時（NT$ 10,000）",
+            "4hr": "半日顧問 4 小時（NT$ 25,000）",
+            "8hr": "全日顧問 8 小時（NT$ 45,000）",
+        }
+
+        plan_name = plan_names.get(booking_data.get("plan", ""), booking_data.get("plan", ""))
+
+        subject = f"【新預約通知】{booking_data['name']} - {booking_data['date']} {booking_data['time']}"
+
+        body = f"""
+━━━━━━━━━━━━━━━━━━━━━━━━
+✨ 新的品牌諮詢預約
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 客戶資料
+姓名：{booking_data['name']}
+電話：{booking_data['phone']}
+Email：{booking_data['email']}
+公司/品牌：{booking_data.get('company', '未填寫')}
+
+📅 預約資訊
+方案：{plan_name}
+日期：{booking_data['date']}
+時段：{booking_data['time']}
+
+💡 諮詢方向
+身份：{booking_data['identity']}
+問題方向：{booking_data['topic']}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+預約時間：{datetime.now().strftime('%Y-%m-%d %H:%M')}
+"""
+
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_EMAIL
+        msg['To'] = NOTIFY_EMAIL
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.send_message(msg)
+
+        logger.info(f"Email notification sent to {NOTIFY_EMAIL}")
+        return True
+    except Exception as e:
+        logger.error(f"Email notification error: {e}")
+        return False
+
+
+# ===== LINE 通知管理者 =====
+def send_line_notification(booking_data):
+    """透過 LINE 推播通知管理者"""
+    try:
+        plan_names = {
+            "free_30min": "首次諮詢 30 分鐘（免費）",
+            "1hr": "顧問諮詢 1 小時（NT$ 6,000）",
+            "2hr": "顧問諮詢 2 小時（NT$ 10,000）",
+            "4hr": "半日顧問 4 小時（NT$ 25,000）",
+            "8hr": "全日顧問 8 小時（NT$ 45,000）",
+        }
+
+        plan_name = plan_names.get(booking_data.get("plan", ""), booking_data.get("plan", ""))
+
+        notification = f"""✨ 新的品牌諮詢預約
+
+📋 {booking_data['name']}
+📞 {booking_data['phone']}
+📧 {booking_data['email']}
+🏢 {booking_data.get('company', '未填寫')}
+
+📅 {booking_data['date']} {booking_data['time']}
+📌 {plan_name}
+
+💡 身份：{booking_data['identity']}
+📝 方向：{booking_data['topic'][:100]}"""
+
+        if ADMIN_LINE_USER_ID:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=ADMIN_LINE_USER_ID,
+                        messages=[TextMessage(text=notification)],
+                    )
+                )
+            logger.info(f"LINE notification sent to admin")
+            return True
+        else:
+            logger.warning("ADMIN_LINE_USER_ID not set, skipping LINE notification")
+            return False
+    except Exception as e:
+        logger.error(f"LINE notification error: {e}")
+        return False
+
+
+# ===== 預約頁面路由 =====
+@app.route("/booking")
+def booking_page():
+    return render_template("booking.html")
+
+
+@app.route("/api/booking", methods=["POST"])
+def api_booking():
+    """處理預約表單提交"""
+    try:
+        data = request.get_json()
+
+        # 驗證必填欄位
+        required_fields = ["name", "phone", "email", "plan", "date", "time", "identity", "topic"]
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({"success": False, "message": f"請填寫{field}"}), 400
+
+        # 儲存預約
+        booking = {
+            "id": len(bookings) + 1,
+            "name": data["name"],
+            "phone": data["phone"],
+            "email": data["email"],
+            "company": data.get("company", ""),
+            "plan": data["plan"],
+            "date": data["date"],
+            "time": data["time"],
+            "identity": data["identity"],
+            "topic": data["topic"],
+            "created_at": datetime.now().isoformat(),
+        }
+        bookings.append(booking)
+        logger.info(f"New booking: {booking['name']} - {booking['date']} {booking['time']}")
+
+        # 發送通知
+        send_email_notification(booking)
+        send_line_notification(booking)
+
+        return jsonify({"success": True, "message": "預約成功"})
+    except Exception as e:
+        logger.error(f"Booking error: {e}")
+        return jsonify({"success": False, "message": "系統錯誤，請稍後再試"}), 500
 
 
 # ===== LINE Webhook 處理 =====
@@ -404,6 +605,27 @@ def handle_message(event):
 
         # ===== 聊天模式 =====
         if state == "chat":
+            # 檢查是否觸發預約
+            if any(trigger in user_text for trigger in BOOKING_TRIGGERS):
+                booking_url = get_booking_url()
+                booking_msg = f"""當然可以 ✨
+
+首次品牌諮詢 30 分鐘完全免費，讓我們先了解您的需求。
+
+請點擊以下連結預約您方便的時間：
+👉 {booking_url}
+
+預約完成後，品牌顧問會在 24 小時內與您確認。
+
+如果有任何問題，也歡迎繼續跟我聊 💡"""
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=booking_msg)],
+                    )
+                )
+                return
+
             # 檢查是否觸發品牌診斷
             if any(trigger in user_text.lower() for trigger in DIAGNOSIS_TRIGGERS):
                 session["state"] = "select_role"
@@ -513,7 +735,8 @@ def handle_message(event):
                             )
                         )
 
-                    cta_msg = "\n---\n\n以上是您的品牌靈魂初步分析報告 ✨\n\n如果您想要更深入的品牌策略規劃，我們的專業顧問團隊可以協助您將這些洞察轉化為具體的品牌行動方案。\n\n歡迎繼續跟我聊品牌相關問題，或輸入「品牌診斷」重新進行分析。"
+                    booking_url = get_booking_url()
+                    cta_msg = f"\n---\n\n以上是您的品牌靈魂初步分析報告 ✨\n\n如果您想要更深入的品牌策略規劃，歡迎預約品牌顧問進一步協助：\n👉 {booking_url}\n\n首次諮詢 30 分鐘免費，讓我們一起把品牌做到位 💡"
 
                     line_bot_api.push_message(
                         PushMessageRequest(
