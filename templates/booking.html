@@ -10,457 +10,668 @@
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
-            background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0d1f3c 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f0f7ff;
+            color: #1a1a2e;
             min-height: 100vh;
-            color: #e8e8e8;
+            line-height: 1.6;
         }
+
         .container {
             max-width: 680px;
             margin: 0 auto;
-            padding: 40px 20px;
+            padding: 40px 24px;
         }
+
+        /* Header */
         .header {
             text-align: center;
             margin-bottom: 40px;
         }
+
+        .header-badge {
+            display: inline-block;
+            background: #e8f4fd;
+            color: #2563eb;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+
         .header h1 {
             font-size: 28px;
-            background: linear-gradient(135deg, #c9a84c, #f0d78c);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-weight: 700;
+            color: #1e3a5f;
             margin-bottom: 8px;
         }
+
         .header p {
-            color: #8899aa;
-            font-size: 14px;
-            letter-spacing: 2px;
+            font-size: 15px;
+            color: #5a7a9a;
         }
+
+        /* Free Banner */
+        .free-banner {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.2);
+        }
+
+        .free-banner h2 {
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .free-banner p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Card */
         .card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(201, 168, 76, 0.2);
+            background: white;
             border-radius: 16px;
             padding: 32px;
             margin-bottom: 24px;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e8f0fe;
         }
+
         .card-title {
             font-size: 18px;
-            color: #c9a84c;
+            font-weight: 600;
+            color: #1e3a5f;
             margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e8f4fd;
         }
-        .free-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #c9a84c, #f0d78c);
-            color: #0a1628;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .pricing-info {
-            background: rgba(201, 168, 76, 0.1);
-            border: 1px solid rgba(201, 168, 76, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
-        }
-        .pricing-info h3 {
-            color: #f0d78c;
-            font-size: 16px;
-            margin-bottom: 12px;
-        }
-        .pricing-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .pricing-item:last-child {
-            border-bottom: none;
-        }
-        .pricing-item .label {
-            color: #aabbcc;
-            font-size: 14px;
-        }
-        .pricing-item .price {
-            color: #f0d78c;
-            font-weight: bold;
-        }
-        .pricing-item.highlight {
-            background: rgba(201, 168, 76, 0.1);
-            border-radius: 8px;
-            padding: 8px 12px;
-            margin: 4px -12px;
-        }
-        .pricing-item.highlight .label {
-            color: #f0d78c;
-        }
+
+        /* Form */
         .form-group {
             margin-bottom: 20px;
         }
+
         .form-group label {
             display: block;
-            color: #aabbcc;
             font-size: 14px;
-            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
         }
+
         .form-group label .required {
-            color: #c9a84c;
+            color: #ef4444;
+            margin-left: 2px;
         }
+
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
             padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
-            color: #e8e8e8;
+            border: 1.5px solid #d1e3f8;
+            border-radius: 10px;
             font-size: 15px;
-            transition: border-color 0.3s;
+            color: #1a1a2e;
+            background: #fafcff;
+            transition: all 0.2s ease;
+            outline: none;
         }
+
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
-            outline: none;
-            border-color: #c9a84c;
+            border-color: #2563eb;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
+
         .form-group textarea {
             resize: vertical;
             min-height: 100px;
         }
-        .form-group select {
-            appearance: none;
-            -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23c9a84c' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px center;
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #9cb3cc;
         }
-        .form-group select option {
-            background: #1a2a4a;
-            color: #e8e8e8;
-        }
-        .time-slots {
+
+        /* Plan Selection */
+        .plan-options {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .plan-option {
+            position: relative;
+            border: 1.5px solid #d1e3f8;
+            border-radius: 12px;
+            padding: 16px 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafcff;
+        }
+
+        .plan-option:hover {
+            border-color: #93c5fd;
+            background: #f0f7ff;
+        }
+
+        .plan-option.selected {
+            border-color: #2563eb;
+            background: #eff6ff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .plan-option.featured {
+            border-color: #2563eb;
+            background: linear-gradient(135deg, #eff6ff, #f0f7ff);
+        }
+
+        .plan-option.featured::after {
+            content: '推薦首次體驗';
+            position: absolute;
+            top: -10px;
+            right: 16px;
+            background: #2563eb;
+            color: white;
+            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 10px;
+        }
+
+        .plan-option input[type="radio"] {
+            display: none;
+        }
+
+        .plan-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e3a5f;
+            margin-bottom: 4px;
+        }
+
+        .plan-detail {
+            font-size: 13px;
+            color: #5a7a9a;
+        }
+
+        .plan-price {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            font-weight: 700;
+            color: #2563eb;
+        }
+
+        .plan-price.free {
+            color: #10b981;
+        }
+
+        /* Time Selection */
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 8px;
             margin-top: 8px;
         }
+
         .time-slot {
-            padding: 10px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 10px 8px;
+            border: 1.5px solid #d1e3f8;
             border-radius: 8px;
+            text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
             font-size: 14px;
-            color: #aabbcc;
+            color: #374151;
+            transition: all 0.2s ease;
+            background: #fafcff;
         }
+
         .time-slot:hover {
-            border-color: #c9a84c;
-            color: #f0d78c;
+            border-color: #93c5fd;
+            background: #f0f7ff;
         }
+
         .time-slot.selected {
-            background: rgba(201, 168, 76, 0.2);
-            border-color: #c9a84c;
-            color: #f0d78c;
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
         }
-        .time-slot.disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-            pointer-events: none;
+
+        /* Identity Selection */
+        .identity-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
         }
+
+        .identity-option {
+            padding: 14px 12px;
+            border: 1.5px solid #d1e3f8;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: #374151;
+            transition: all 0.2s ease;
+            background: #fafcff;
+        }
+
+        .identity-option:hover {
+            border-color: #93c5fd;
+            background: #f0f7ff;
+        }
+
+        .identity-option.selected {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .identity-icon {
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+
+        /* Submit Button */
         .submit-btn {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, #c9a84c, #a88a3a);
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
             border: none;
             border-radius: 12px;
-            color: #0a1628;
             font-size: 16px;
-            font-weight: bold;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+            letter-spacing: 0.5px;
         }
+
         .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(201, 168, 76, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(37, 99, 235, 0.4);
         }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
         .submit-btn:disabled {
-            opacity: 0.5;
+            background: #93c5fd;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
         }
-        .success-message {
+
+        /* Success Modal */
+        .modal-overlay {
             display: none;
-            text-align: center;
-            padding: 40px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
         }
-        .success-message .icon {
-            font-size: 48px;
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-icon {
+            font-size: 56px;
             margin-bottom: 16px;
         }
-        .success-message h2 {
-            color: #f0d78c;
+
+        .modal h3 {
+            font-size: 22px;
+            color: #1e3a5f;
             margin-bottom: 12px;
         }
-        .success-message p {
-            color: #8899aa;
-            line-height: 1.8;
+
+        .modal p {
+            font-size: 14px;
+            color: #5a7a9a;
+            line-height: 1.7;
         }
+
+        .modal-btn {
+            margin-top: 24px;
+            padding: 12px 32px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn:hover {
+            background: #1d4ed8;
+        }
+
+        /* Footer */
         .footer {
             text-align: center;
-            margin-top: 40px;
-            color: #556677;
-            font-size: 12px;
+            margin-top: 32px;
+            padding: 20px;
+            color: #5a7a9a;
+            font-size: 13px;
         }
+
+        .footer a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        /* Responsive */
         @media (max-width: 480px) {
             .container {
-                padding: 20px 16px;
+                padding: 24px 16px;
             }
+
             .card {
                 padding: 24px 20px;
             }
-            .time-slots {
-                grid-template-columns: repeat(2, 1fr);
-            }
+
             .header h1 {
                 font-size: 24px;
+            }
+
+            .time-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .identity-options {
+                grid-template-columns: 1fr;
+            }
+
+            .plan-price {
+                position: static;
+                transform: none;
+                margin-top: 4px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <div class="header">
+            <div class="header-badge">Hui Brand Lab</div>
             <h1>品牌諮詢預約</h1>
-            <p>心惠｜品牌靈魂建構所 Hui Brand Lab</p>
+            <p>讓品牌被理解、被記住、被選擇</p>
         </div>
 
-        <!-- 價目資訊 -->
-        <div class="pricing-info">
-            <h3>✨ 單次顧問諮詢</h3>
-            <div class="pricing-item highlight">
-                <span class="label">首次諮詢 30 分鐘</span>
-                <span class="price"><span class="free-badge">免費</span></span>
-            </div>
-            <div class="pricing-item">
-                <span class="label">顧問諮詢 1 小時</span>
-                <span class="price">NT$ 6,000</span>
-            </div>
-            <div class="pricing-item">
-                <span class="label">顧問諮詢 2 小時</span>
-                <span class="price">NT$ 10,000</span>
-            </div>
-            <div class="pricing-item">
-                <span class="label">半日顧問 4 小時</span>
-                <span class="price">NT$ 25,000</span>
-            </div>
-            <div class="pricing-item">
-                <span class="label">全日顧問 8 小時</span>
-                <span class="price">NT$ 45,000</span>
-            </div>
+        <!-- Free Banner -->
+        <div class="free-banner">
+            <h2>首次諮詢 30 分鐘免費</h2>
+            <p>讓我們先了解您的品牌需求，為您找到最適合的方向</p>
         </div>
 
-        <!-- 預約表單 -->
-        <form id="bookingForm">
+        <!-- Form -->
+        <form id="bookingForm" onsubmit="return false;">
+            <!-- 基本資料 -->
             <div class="card">
-                <div class="card-title">📋 基本資料</div>
-                
+                <div class="card-title">基本資料</div>
                 <div class="form-group">
                     <label>姓名 <span class="required">*</span></label>
-                    <input type="text" id="name" name="name" required placeholder="請輸入您的姓名">
+                    <input type="text" id="name" placeholder="請輸入您的姓名" required>
                 </div>
-
                 <div class="form-group">
                     <label>電話 <span class="required">*</span></label>
-                    <input type="tel" id="phone" name="phone" required placeholder="例如：0912-345-678">
+                    <input type="tel" id="phone" placeholder="例如：0912-345-678" required>
                 </div>
-
                 <div class="form-group">
                     <label>Email <span class="required">*</span></label>
-                    <input type="email" id="email" name="email" required placeholder="example@email.com">
+                    <input type="email" id="email" placeholder="example@email.com" required>
                 </div>
-
                 <div class="form-group">
-                    <label>公司 / 品牌名稱</label>
-                    <input type="text" id="company" name="company" placeholder="如果有的話請填寫">
+                    <label>公司/品牌名稱</label>
+                    <input type="text" id="company" placeholder="如果有的話請填寫">
                 </div>
             </div>
 
+            <!-- 諮詢方案 -->
             <div class="card">
-                <div class="card-title">📅 選擇諮詢方案與時間</div>
-
-                <div class="form-group">
-                    <label>諮詢方案 <span class="required">*</span></label>
-                    <select id="plan" name="plan" required>
-                        <option value="">請選擇方案</option>
-                        <option value="free_30min">首次諮詢 30 分鐘（免費）</option>
-                        <option value="1hr">顧問諮詢 1 小時（NT$ 6,000）</option>
-                        <option value="2hr">顧問諮詢 2 小時（NT$ 10,000）</option>
-                        <option value="4hr">半日顧問 4 小時（NT$ 25,000）</option>
-                        <option value="8hr">全日顧問 8 小時（NT$ 45,000）</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>預約日期 <span class="required">*</span></label>
-                    <input type="date" id="date" name="date" required>
-                </div>
-
-                <div class="form-group">
-                    <label>選擇時段 <span class="required">*</span></label>
-                    <div class="time-slots" id="timeSlots">
-                        <div class="time-slot" data-time="10:00">10:00</div>
-                        <div class="time-slot" data-time="10:30">10:30</div>
-                        <div class="time-slot" data-time="11:00">11:00</div>
-                        <div class="time-slot" data-time="11:30">11:30</div>
-                        <div class="time-slot" data-time="12:00">12:00</div>
-                        <div class="time-slot" data-time="12:30">12:30</div>
-                        <div class="time-slot" data-time="13:00">13:00</div>
-                        <div class="time-slot" data-time="13:30">13:30</div>
-                        <div class="time-slot" data-time="14:00">14:00</div>
-                        <div class="time-slot" data-time="14:30">14:30</div>
-                        <div class="time-slot" data-time="15:00">15:00</div>
-                        <div class="time-slot" data-time="15:30">15:30</div>
-                        <div class="time-slot" data-time="16:00">16:00</div>
-                        <div class="time-slot" data-time="16:30">16:30</div>
-                        <div class="time-slot" data-time="17:00">17:00</div>
-                        <div class="time-slot" data-time="17:30">17:30</div>
+                <div class="card-title">選擇諮詢方案</div>
+                <div class="plan-options">
+                    <div class="plan-option featured selected" onclick="selectPlan(this, 'free_30min')">
+                        <input type="radio" name="plan" value="free_30min" checked>
+                        <div class="plan-name">首次諮詢 30 分鐘</div>
+                        <div class="plan-detail">初步了解品牌需求</div>
+                        <div class="plan-price free">免費</div>
                     </div>
-                    <input type="hidden" id="selectedTime" name="time" required>
+                    <div class="plan-option" onclick="selectPlan(this, '1hr')">
+                        <input type="radio" name="plan" value="1hr">
+                        <div class="plan-name">顧問諮詢 1 小時</div>
+                        <div class="plan-detail">初步諮詢、問題釐清、方向建議</div>
+                        <div class="plan-price">NT$ 6,000</div>
+                    </div>
+                    <div class="plan-option" onclick="selectPlan(this, '2hr')">
+                        <input type="radio" name="plan" value="2hr">
+                        <div class="plan-name">顧問諮詢 2 小時</div>
+                        <div class="plan-detail">深入問題分析、策略方向建議</div>
+                        <div class="plan-price">NT$ 10,000</div>
+                    </div>
+                    <div class="plan-option" onclick="selectPlan(this, '4hr')">
+                        <input type="radio" name="plan" value="4hr">
+                        <div class="plan-name">半日顧問 4 小時</div>
+                        <div class="plan-detail">全面性診斷、策略規劃建議</div>
+                        <div class="plan-price">NT$ 25,000</div>
+                    </div>
+                    <div class="plan-option" onclick="selectPlan(this, '8hr')">
+                        <input type="radio" name="plan" value="8hr">
+                        <div class="plan-name">全日顧問 8 小時</div>
+                        <div class="plan-detail">完整問題梳理、深度策略擬定</div>
+                        <div class="plan-price">NT$ 45,000</div>
+                    </div>
                 </div>
             </div>
 
+            <!-- 預約時間 -->
             <div class="card">
-                <div class="card-title">💡 諮詢方向</div>
-
+                <div class="card-title">選擇預約時間</div>
                 <div class="form-group">
-                    <label>您目前的身份 <span class="required">*</span></label>
-                    <select id="identity" name="identity" required>
-                        <option value="">請選擇</option>
-                        <option value="企業主">企業主</option>
-                        <option value="個人品牌經營者">個人品牌經營者</option>
-                        <option value="創業者">創業者（正在創業或準備創業）</option>
-                        <option value="設計師/創作者">設計師 / 創作者</option>
-                        <option value="自媒體經營者">自媒體經營者</option>
-                        <option value="其他">其他</option>
-                    </select>
+                    <label>日期 <span class="required">*</span></label>
+                    <input type="date" id="date" required>
                 </div>
+                <div class="form-group">
+                    <label>時段 <span class="required">*</span></label>
+                    <div class="time-grid" id="timeGrid">
+                        <div class="time-slot" onclick="selectTime(this, '10:00')">10:00</div>
+                        <div class="time-slot" onclick="selectTime(this, '10:30')">10:30</div>
+                        <div class="time-slot" onclick="selectTime(this, '11:00')">11:00</div>
+                        <div class="time-slot" onclick="selectTime(this, '11:30')">11:30</div>
+                        <div class="time-slot" onclick="selectTime(this, '13:00')">13:00</div>
+                        <div class="time-slot" onclick="selectTime(this, '13:30')">13:30</div>
+                        <div class="time-slot" onclick="selectTime(this, '14:00')">14:00</div>
+                        <div class="time-slot" onclick="selectTime(this, '14:30')">14:30</div>
+                        <div class="time-slot" onclick="selectTime(this, '15:00')">15:00</div>
+                        <div class="time-slot" onclick="selectTime(this, '15:30')">15:30</div>
+                        <div class="time-slot" onclick="selectTime(this, '16:00')">16:00</div>
+                        <div class="time-slot" onclick="selectTime(this, '16:30')">16:30</div>
+                        <div class="time-slot" onclick="selectTime(this, '17:00')">17:00</div>
+                        <div class="time-slot" onclick="selectTime(this, '17:30')">17:30</div>
+                    </div>
+                </div>
+            </div>
 
+            <!-- 諮詢方向 -->
+            <div class="card">
+                <div class="card-title">諮詢方向</div>
+                <div class="form-group">
+                    <label>您的身份 <span class="required">*</span></label>
+                    <div class="identity-options">
+                        <div class="identity-option" onclick="selectIdentity(this, '企業主')">
+                            <div class="identity-icon">🏢</div>
+                            <div>企業主</div>
+                        </div>
+                        <div class="identity-option" onclick="selectIdentity(this, '個人品牌')">
+                            <div class="identity-icon">👤</div>
+                            <div>個人品牌</div>
+                        </div>
+                        <div class="identity-option" onclick="selectIdentity(this, '創業者')">
+                            <div class="identity-icon">🚀</div>
+                            <div>創業者</div>
+                        </div>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label>想諮詢的問題方向 <span class="required">*</span></label>
-                    <textarea id="topic" name="topic" required placeholder="請簡述您想諮詢的問題或方向，例如：&#10;• 品牌定位不夠清晰&#10;• 想了解 AI 如何幫助品牌&#10;• 正在考慮品牌升級&#10;• 想建立個人品牌但不知道從哪開始"></textarea>
+                    <textarea id="topic" placeholder="請簡述您目前遇到的品牌問題，或想了解的方向。&#10;&#10;例如：品牌方向不明確、想做個人品牌但不知道從哪開始、想了解 AI 如何幫助品牌等" required></textarea>
                 </div>
             </div>
 
-            <button type="submit" class="submit-btn" id="submitBtn">確認預約</button>
+            <!-- Submit -->
+            <button type="button" class="submit-btn" onclick="submitBooking()">
+                確認預約
+            </button>
         </form>
 
-        <!-- 成功訊息 -->
-        <div class="success-message" id="successMessage">
-            <div class="icon">✨</div>
-            <h2>預約成功</h2>
-            <p>
-                感謝您的預約！<br>
-                我們已收到您的諮詢需求，<br>
-                品牌顧問將會在 24 小時內與您確認時間。<br><br>
-                如有任何問題，歡迎隨時透過 LINE 聯繫心惠 ✨
-            </p>
-        </div>
-
+        <!-- Footer -->
         <div class="footer">
-            <p>© 2024 心惠｜品牌靈魂建構所 Hui Brand Lab</p>
+            <p>心惠｜品牌靈魂建構所 Hui Brand Lab</p>
+            <p style="margin-top: 4px;">預約完成後，品牌顧問將於 24 小時內與您確認</p>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal-overlay" id="successModal">
+        <div class="modal">
+            <div class="modal-icon">✅</div>
+            <h3>預約成功</h3>
+            <p>感謝您的預約！<br>品牌顧問將於 24 小時內與您確認時間。<br><br>如有任何問題，歡迎隨時透過 LINE 聯繫我們。</p>
+            <button class="modal-btn" onclick="closeModal()">我知道了</button>
         </div>
     </div>
 
     <script>
-        // 設定日期選擇器的最小值為明天
-        const dateInput = document.getElementById('date');
+        // 設定日期最小值為今天
         const today = new Date();
-        today.setDate(today.getDate() + 1);
-        dateInput.min = today.toISOString().split('T')[0];
-        
-        // 限制只能選擇週一到週五
-        dateInput.addEventListener('input', function() {
-            const selected = new Date(this.value);
-            const day = selected.getDay();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('date').min = tomorrow.toISOString().split('T')[0];
+
+        // 限制只能選週一到週五
+        document.getElementById('date').addEventListener('input', function() {
+            const selectedDate = new Date(this.value);
+            const day = selectedDate.getDay();
             if (day === 0 || day === 6) {
                 alert('請選擇週一到週五的日期');
                 this.value = '';
             }
         });
 
-        // 時段選擇
+        let selectedPlan = 'free_30min';
         let selectedTime = '';
-        document.querySelectorAll('.time-slot').forEach(slot => {
-            slot.addEventListener('click', function() {
-                if (this.classList.contains('disabled')) return;
-                document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
-                this.classList.add('selected');
-                selectedTime = this.dataset.time;
-                document.getElementById('selectedTime').value = selectedTime;
-            });
-        });
+        let selectedIdentity = '';
 
-        // 表單提交
-        document.getElementById('bookingForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            if (!selectedTime) {
-                alert('請選擇諮詢時段');
-                return;
-            }
+        function selectPlan(element, plan) {
+            document.querySelectorAll('.plan-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedPlan = plan;
+        }
 
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = '預約中...';
+        function selectTime(element, time) {
+            document.querySelectorAll('.time-slot').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedTime = time;
+        }
 
-            const formData = {
-                name: document.getElementById('name').value,
-                phone: document.getElementById('phone').value,
-                email: document.getElementById('email').value,
-                company: document.getElementById('company').value,
-                plan: document.getElementById('plan').value,
-                date: document.getElementById('date').value,
-                time: selectedTime,
-                identity: document.getElementById('identity').value,
-                topic: document.getElementById('topic').value,
-            };
+        function selectIdentity(element, identity) {
+            document.querySelectorAll('.identity-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedIdentity = identity;
+        }
+
+        async function submitBooking() {
+            const name = document.getElementById('name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const company = document.getElementById('company').value.trim();
+            const date = document.getElementById('date').value;
+            const topic = document.getElementById('topic').value.trim();
+
+            // 驗證
+            if (!name) { alert('請填寫姓名'); return; }
+            if (!phone) { alert('請填寫電話'); return; }
+            if (!email) { alert('請填寫 Email'); return; }
+            if (!date) { alert('請選擇日期'); return; }
+            if (!selectedTime) { alert('請選擇時段'); return; }
+            if (!selectedIdentity) { alert('請選擇您的身份'); return; }
+            if (!topic) { alert('請填寫諮詢問題方向'); return; }
+
+            const btn = document.querySelector('.submit-btn');
+            btn.disabled = true;
+            btn.textContent = '提交中...';
 
             try {
                 const response = await fetch('/api/booking', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify({
+                        name, phone, email, company,
+                        plan: selectedPlan,
+                        date, time: selectedTime,
+                        identity: selectedIdentity,
+                        topic
+                    })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    document.getElementById('bookingForm').style.display = 'none';
-                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('successModal').classList.add('active');
+                    document.getElementById('bookingForm').reset();
+                    selectedTime = '';
+                    selectedIdentity = '';
+                    document.querySelectorAll('.time-slot').forEach(el => el.classList.remove('selected'));
+                    document.querySelectorAll('.identity-option').forEach(el => el.classList.remove('selected'));
                 } else {
                     alert(result.message || '預約失敗，請稍後再試');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '確認預約';
                 }
             } catch (error) {
                 alert('網路錯誤，請稍後再試');
-                submitBtn.disabled = false;
-                submitBtn.textContent = '確認預約';
             }
-        });
+
+            btn.disabled = false;
+            btn.textContent = '確認預約';
+        }
+
+        function closeModal() {
+            document.getElementById('successModal').classList.remove('active');
+        }
     </script>
 </body>
 </html>
