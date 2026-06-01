@@ -583,6 +583,9 @@ def callback():
     except InvalidSignatureError:
         logger.error("Invalid signature")
         abort(400)
+    except Exception as e:
+        logger.error(f"Webhook handler error: {e}")
+        # 即使出錯也回傳 200，避免 LINE 平台認為 bot 異常而將其踢出群組
     return "OK"
 
 
@@ -607,21 +610,26 @@ def handle_follow(event):
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    # 取得來源類型和 user_id
-    source_type = event.source.type  # "user", "group", "room"
-    user_id = event.source.user_id
-    user_text = event.message.text.strip()
+    try:
+        # 取得來源類型和 user_id
+        source_type = event.source.type  # "user", "group", "room"
+        user_id = getattr(event.source, 'user_id', None)
+        user_text = event.message.text.strip()
 
-    # 群組/聊天室中，使用 group_id 或 room_id 作為 push 目標
-    if source_type == "group":
-        push_target = event.source.group_id
-    elif source_type == "room":
-        push_target = event.source.room_id
-    else:
-        push_target = user_id
+        # 群組/聊天室中，使用 group_id 或 room_id 作為 push 目標
+        if source_type == "group":
+            push_target = event.source.group_id
+        elif source_type == "room":
+            push_target = event.source.room_id
+        else:
+            push_target = user_id
 
-    # Session 以 user_id 為 key（每個用戶獨立狀態）
-    session = get_session(user_id)
+        # 如果無法取得 user_id（某些群組事件），使用 push_target 作為 session key
+        session_key = user_id if user_id else push_target
+        session = get_session(session_key)
+    except Exception as e:
+        logger.error(f"Error in handle_message init: {e}")
+        return
 
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
@@ -798,15 +806,19 @@ def handle_message(event):
 @handler.add(JoinEvent)
 def handle_join(event):
     """心惠被加入群組或聊天室時自動打招呼"""
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        welcome = "大家好！我是心惠 \u2728\n\nAI 品牌建構師，專門協助品牌定位、策略規劃與市場分析。\n\n有任何品牌相關的問題，歡迎直接問我 \ud83d\udca1"
-        line_bot_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=welcome)],
+    try:
+        logger.info(f"JoinEvent received: source_type={event.source.type}")
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            welcome = "大家好！我是心惠 ✨\n\nAI 品牌建構師，專門協助品牌定位、策略規劃與市場分析。\n\n有任何品牌相關的問題，歡迎直接問我 💡"
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=welcome)],
+                )
             )
-        )
+    except Exception as e:
+        logger.error(f"Error in handle_join: {e}")
 
 
 if __name__ == "__main__":
