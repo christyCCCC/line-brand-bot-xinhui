@@ -15,7 +15,7 @@ from flask import Flask, request, abort, render_template, jsonify
 
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
+from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent, JoinEvent
 from linebot.v3.messaging import (
     Configuration,
     ApiClient,
@@ -607,8 +607,20 @@ def handle_follow(event):
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
+    # 取得來源類型和 user_id
+    source_type = event.source.type  # "user", "group", "room"
     user_id = event.source.user_id
     user_text = event.message.text.strip()
+
+    # 群組/聊天室中，使用 group_id 或 room_id 作為 push 目標
+    if source_type == "group":
+        push_target = event.source.group_id
+    elif source_type == "room":
+        push_target = event.source.room_id
+    else:
+        push_target = user_id
+
+    # Session 以 user_id 為 key（每個用戶獨立狀態）
     session = get_session(user_id)
 
     with ApiClient(configuration) as api_client:
@@ -743,7 +755,7 @@ def handle_message(event):
                     for msg_text in messages_to_send:
                         line_bot_api.push_message(
                             PushMessageRequest(
-                                to=user_id,
+                                to=push_target,
                                 messages=[TextMessage(text=msg_text)],
                             )
                         )
@@ -753,7 +765,7 @@ def handle_message(event):
 
                     line_bot_api.push_message(
                         PushMessageRequest(
-                            to=user_id,
+                            to=push_target,
                             messages=[TextMessage(text=cta_msg)],
                         )
                     )
@@ -761,7 +773,7 @@ def handle_message(event):
                     logger.error(f"Analysis error: {e}")
                     line_bot_api.push_message(
                         PushMessageRequest(
-                            to=user_id,
+                            to=push_target,
                             messages=[TextMessage(text="抱歉，分析過程中遇到了一些問題。請稍後輸入「品牌診斷」重新嘗試。")],
                         )
                     )
@@ -781,6 +793,20 @@ def handle_message(event):
                 )
             )
             return
+
+
+@handler.add(JoinEvent)
+def handle_join(event):
+    """心惠被加入群組或聊天室時自動打招呼"""
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        welcome = "大家好！我是心惠 \u2728\n\nAI 品牌建構師，專門協助品牌定位、策略規劃與市場分析。\n\n有任何品牌相關的問題，歡迎直接問我 \ud83d\udca1"
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=welcome)],
+            )
+        )
 
 
 if __name__ == "__main__":
