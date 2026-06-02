@@ -22,6 +22,7 @@ from linebot.v3.messaging import (
     MessagingApi,
     ReplyMessageRequest,
     PushMessageRequest,
+    BroadcastRequest,
     TextMessage,
 )
 
@@ -819,6 +820,61 @@ def handle_join(event):
             )
     except Exception as e:
         logger.error(f"Error in handle_join: {e}")
+
+
+# ===== 每日早安祝福功能 =====
+DAILY_GREETING_SECRET = os.environ.get("DAILY_GREETING_SECRET", "xinhui-morning-2026")
+
+@app.route("/daily-greeting", methods=["POST", "GET"])
+def daily_greeting():
+    """每日早安祝福 - 由外部排程服務觸發"""
+    # 驗證密鑰（避免被隨意觸發）
+    secret = request.args.get("secret", "") or request.form.get("secret", "")
+    if secret != DAILY_GREETING_SECRET:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        # 用 OpenAI 生成獨特的早安祝福
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """你是心惠，一位 AI 品牌建構師。
+請用溫暖、有質感、帶點品牌思維的方式寫一則早安祝福。
+要求：
+- 每次內容都要不一樣，充滿創意
+- 可以結合品牌思維、創業勵志、生活智慧、當天節氣或時事
+- 語氣像一個有溫度的朋友，不要太官方
+- 結尾可以加一個小問題或思考點，引導互動
+- 控制在 100-150 字以內
+- 可以適當使用 emoji"""
+                },
+                {
+                    "role": "user",
+                    "content": f"今天是 {datetime.now().strftime('%Y年%m月%d日 %A')}，請寫一則早安祝福。"
+                }
+            ],
+            max_tokens=300,
+            temperature=0.9
+        )
+        greeting = response.choices[0].message.content.strip()
+
+        # 用 Broadcast 發送給所有好友
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            line_bot_api.broadcast(
+                BroadcastRequest(
+                    messages=[TextMessage(text=greeting)]
+                )
+            )
+
+        logger.info(f"Daily greeting sent: {greeting[:50]}...")
+        return jsonify({"success": True, "greeting": greeting}), 200
+
+    except Exception as e:
+        logger.error(f"Daily greeting error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
