@@ -57,6 +57,31 @@ handler = WebhookHandler(CHANNEL_SECRET)
 # ===== 預約資料儲存 =====
 bookings = []
 
+# ===== 已知用戶 user_id 儲存（用於 Push Message 替代 Broadcast）=====
+KNOWN_USERS_FILE = "/tmp/known_users.json"
+
+def load_known_users():
+    """從檔案載入已知用戶列表"""
+    try:
+        if os.path.exists(KNOWN_USERS_FILE):
+            with open(KNOWN_USERS_FILE, "r") as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading known users: {e}")
+    return []
+
+def save_known_user(user_id):
+    """記錄新的 user_id（如果尚未記錄）"""
+    try:
+        users = load_known_users()
+        if user_id and user_id not in users:
+            users.append(user_id)
+            with open(KNOWN_USERS_FILE, "w") as f:
+                json.dump(users, f)
+            logger.info(f"New user recorded: {user_id} (total: {len(users)})") 
+    except Exception as e:
+        logger.error(f"Error saving known user: {e}")
+
 # ===== 心惠的系統人設 =====
 SYSTEM_PROMPT = """你是「心惠」，品牌靈魂建構所（Hui Brand Lab）的 AI 品牌顧問。
 
@@ -599,6 +624,7 @@ def health():
 def handle_follow(event):
     user_id = event.source.user_id
     reset_session(user_id)
+    save_known_user(user_id)  # 記錄新追蹤者
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         line_bot_api.reply_message(
@@ -628,6 +654,9 @@ def handle_message(event):
         # 如果無法取得 user_id（某些群組事件），使用 push_target 作為 session key
         session_key = user_id if user_id else push_target
         session = get_session(session_key)
+        # 記錄用戶 user_id（僅記錄一對一用戶，不記錄群組）
+        if source_type == "user" and user_id:
+            save_known_user(user_id)
     except Exception as e:
         logger.error(f"Error in handle_message init: {e}")
         return
@@ -953,17 +982,31 @@ def daily_greeting():
         )
         greeting = response.choices[0].message.content.strip()
 
-        # 用 Broadcast 發送給所有好友
+        # 改用 Push Message 逐一發送給所有已知用戶（繞過 Broadcast 月度限制）
+        known_users = load_known_users()
+        # 確保 ADMIN_LINE_USER_ID 也在列表中
+        if ADMIN_LINE_USER_ID and ADMIN_LINE_USER_ID not in known_users:
+            known_users.append(ADMIN_LINE_USER_ID)
+
+        sent_count = 0
+        failed_count = 0
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            line_bot_api.broadcast(
-                BroadcastRequest(
-                    messages=[TextMessage(text=greeting)]
-                )
-            )
+            for uid in known_users:
+                try:
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=uid,
+                            messages=[TextMessage(text=greeting)]
+                        )
+                    )
+                    sent_count += 1
+                except Exception as push_err:
+                    logger.error(f"Push failed for {uid}: {push_err}")
+                    failed_count += 1
 
-        logger.info(f"Brand knowledge greeting sent (topic: {today_topic['topic']}): {greeting[:50]}...")
-        return jsonify({"success": True, "topic": today_topic['topic'], "greeting": greeting}), 200
+        logger.info(f"Brand knowledge greeting sent via Push (topic: {today_topic['topic']}): sent={sent_count}, failed={failed_count}")
+        return jsonify({"success": True, "topic": today_topic['topic'], "greeting": greeting, "sent": sent_count, "failed": failed_count, "total_users": len(known_users)}), 200
 
     except Exception as e:
         logger.error(f"Daily greeting error: {e}")
