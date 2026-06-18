@@ -1170,6 +1170,157 @@ def ig_broadcast():
         return jsonify({"error": str(e)}), 500
 
 
+# ===== IG Graph API 全自動發佈模組 =====
+# 需要環境變數：IG_ACCESS_TOKEN、IG_BUSINESS_ACCOUNT_ID
+import requests as _requests
+
+IG_ACCESS_TOKEN = os.environ.get("IG_ACCESS_TOKEN", "")
+IG_BUSINESS_ACCOUNT_ID = os.environ.get("IG_BUSINESS_ACCOUNT_ID", "")
+IG_GRAPH_VERSION = os.environ.get("IG_GRAPH_VERSION", "v21.0")
+
+
+def publish_to_instagram(image_url, caption):
+    """透過 IG Graph API 發佈單張圖片貼文。
+    回傳 (success: bool, result: dict)。成功時 result 含 permalink。
+    """
+    if not IG_ACCESS_TOKEN or not IG_BUSINESS_ACCOUNT_ID:
+        return False, {"error": "IG_ACCESS_TOKEN 或 IG_BUSINESS_ACCOUNT_ID 未設定"}
+
+    base = f"https://graph.facebook.com/{IG_GRAPH_VERSION}"
+    try:
+        # Step 1: 建立媒體容器
+        create_resp = _requests.post(
+            f"{base}/{IG_BUSINESS_ACCOUNT_ID}/media",
+            data={
+                "image_url": image_url,
+                "caption": caption,
+                "access_token": IG_ACCESS_TOKEN,
+            },
+            timeout=60,
+        )
+        create_data = create_resp.json()
+        if "id" not in create_data:
+            return False, {"error": "create_media_failed", "detail": create_data}
+        creation_id = create_data["id"]
+
+        # Step 2: 發佈容器
+        publish_resp = _requests.post(
+            f"{base}/{IG_BUSINESS_ACCOUNT_ID}/media_publish",
+            data={
+                "creation_id": creation_id,
+                "access_token": IG_ACCESS_TOKEN,
+            },
+            timeout=60,
+        )
+        publish_data = publish_resp.json()
+        if "id" not in publish_data:
+            return False, {"error": "publish_failed", "detail": publish_data}
+        media_id = publish_data["id"]
+
+        # Step 3: 取得貼文連結 permalink
+        permalink = ""
+        try:
+            perma_resp = _requests.get(
+                f"{base}/{media_id}",
+                params={"fields": "permalink", "access_token": IG_ACCESS_TOKEN},
+                timeout=30,
+            )
+            permalink = perma_resp.json().get("permalink", "")
+        except Exception as pe:
+            logger.error(f"get permalink error: {pe}")
+
+        return True, {"media_id": media_id, "permalink": permalink}
+
+    except Exception as e:
+        logger.error(f"publish_to_instagram error: {e}")
+        return False, {"error": str(e)}
+
+
+@app.route("/ig-publish", methods=["POST", "GET"])
+def ig_publish():
+    """全自動：接收 image_url + caption，發佈到 IG，成功後自動在 LINE 發送導流。
+    參數：secret、image_url（公開圖片網址）、caption（IG 文案）、
+          可選 title（主題）、line_notify（是否同步發 LINE 導流，預設 true）
+    """
+    secret = request.args.get("secret", "") or request.form.get("secret", "")
+    if secret != DAILY_GREETING_SECRET:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    image_url = request.args.get("image_url", "") or request.form.get("image_url", "")
+    caption = request.args.get("caption", "") or request.form.get("caption", "")
+    title = request.args.get("title", "") or request.form.get("title", "")
+    line_notify = (request.args.get("line_notify", "true") or request.form.get("line_notify", "true")).lower() != "false"
+
+    if not image_url:
+        return jsonify({"error": "missing image_url"}), 400
+
+    # 若沒帶 caption，嘗試讀取最近生成的內容
+    if not caption:
+        try:
+            if os.path.exists(IG_CONTENT_FILE):
+                with open(IG_CONTENT_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    caption = data.get("caption", "")
+                    if not title:
+                        title = data.get("topic", "")
+        except Exception:
+            pass
+
+    # Step 1: 發佈到 IG
+    ok, ig_result = publish_to_instagram(image_url, caption)
+    if not ok:
+        return jsonify({"success": False, "stage": "ig_publish", "detail": ig_result}), 502
+
+    permalink = ig_result.get("permalink", "")
+
+    # Step 2: 在 LINE 發送導流
+    line_result = None
+    if line_notify and permalink:
+        topic_line = f"\u672c\u65e5\u4e3b\u984c\uff1a{title}\n\n" if title else ""
+        promo_text = (
+            f"\u54c1\u724c\u77e5\u8b58\u65b0\u8cbc\u6587\u4e0a\u7dda \u2728\n\n"
+            f"{topic_line}"
+            f"\u5b8c\u6574\u5167\u5bb9\u5df2\u767c\u4f48\u5728 Instagram\uff0c"
+            f"\u9ede\u9032\u4f86\u770b\u770b\u4eca\u5929\u7684\u54c1\u724c\u601d\u8003 \ud83d\udc47\n"
+            f"{permalink}\n\n"
+            f"\u5e02\u5834\u4e0d\u7f3a\u54c1\u724c\uff0c\u7f3a\u7684\u662f\u88ab\u8a18\u4f4f\u7684\u54c1\u724c\u3002"
+        )
+        from linebot.v3.messaging import ImageMessage
+        messages = [
+            ImageMessage(original_content_url=image_url, preview_image_url=image_url),
+            TextMessage(text=promo_text),
+        ]
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                try:
+                    line_bot_api.broadcast(BroadcastRequest(messages=messages))
+                    line_result = {"method": "broadcast"}
+                except Exception as bc_err:
+                    logger.error(f"Broadcast failed, fallback to push: {bc_err}")
+                    known_users = load_known_users()
+                    if ADMIN_LINE_USER_ID and ADMIN_LINE_USER_ID not in known_users:
+                        known_users.append(ADMIN_LINE_USER_ID)
+                    sent = 0
+                    for uid in known_users:
+                        try:
+                            line_bot_api.push_message(PushMessageRequest(to=uid, messages=messages))
+                            sent += 1
+                        except Exception:
+                            pass
+                    line_result = {"method": "push", "sent": sent}
+        except Exception as e:
+            logger.error(f"line notify error: {e}")
+            line_result = {"error": str(e)}
+
+    return jsonify({
+        "success": True,
+        "ig": ig_result,
+        "permalink": permalink,
+        "line": line_result,
+    }), 200
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
