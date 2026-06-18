@@ -1013,6 +1013,163 @@ def daily_greeting():
         return jsonify({"error": str(e)}), 500
 
 
+# ===== IG 圖文導流功能 =====
+# 儲存最近一次生成的 IG 內容（給管理員確認與圖片生成使用）
+IG_CONTENT_FILE = "/tmp/ig_content_latest.json"
+
+def _today_brand_topic():
+    """根據日期取得今日品牌知識主題"""
+    from datetime import date
+    day_of_year = date.today().timetuple().tm_yday
+    topic_index = (day_of_year // 2) % len(BRAND_KNOWLEDGE_TOPICS)
+    return BRAND_KNOWLEDGE_TOPICS[topic_index]
+
+
+@app.route("/ig-content", methods=["POST", "GET"])
+def ig_content():
+    """生成當日 IG 圖文內容：回傳「圖片標題重點」與「IG 貼文文案」
+    供 Manus 排程任務用來生成藍金水紋風格圖片。
+    """
+    secret = request.args.get("secret", "") or request.form.get("secret", "")
+    if secret != DAILY_GREETING_SECRET:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        today_topic = _today_brand_topic()
+
+        # 生成 IG 貼文文案（精煉、可直接複製貼上發布）
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": f"""你是心惠（潘心惠），品牌靈魂建構所的 AI 品牌建構師。
+你正在為 Instagram 撰寫一則品牌知識貼文文案。
+
+今天的主題是：「{today_topic['topic']}」
+核心知識內容：
+{today_topic['knowledge']}
+
+請輸出一則「可以直接複製貼上發布」的 IG 貼文文案，格式如下：
+1. 第一行：一句吸睛的主標（帶 1 個 emoji）
+2. 空一行
+3. 一句引導提問或破題
+4. 空一行
+5. 用 ▸ 條列 3-4 個重點（精煉、每點一行）
+6. 空一行
+7. 一句品牌金句作結
+8. 空一行
+9. 一行 hashtag（6-8 個，含 #品牌靈魂建構所 #鏡水方舟）
+
+要求：
+- 文案精煉有重點，能吸引讀者，總字數約 150-220 字（不含 hashtag）
+- 語氣專業有溫度，高端品牌顧問感
+- 適度使用 emoji，不過度
+- 用繁體中文"""
+                },
+                {
+                    "role": "user",
+                    "content": "請撰寫今天的 IG 品牌知識貼文文案。"
+                }
+            ],
+            max_tokens=600,
+            temperature=0.8
+        )
+        caption = response.choices[0].message.content.strip()
+
+        # 整理圖片用的重點（直接取知識庫的條列，給圖片文字使用）
+        result = {
+            "topic": today_topic["topic"],
+            "knowledge": today_topic["knowledge"],
+            "caption": caption,
+        }
+        try:
+            with open(IG_CONTENT_FILE, "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"Error saving ig content: {e}")
+
+        return jsonify({"success": True, **result}), 200
+
+    except Exception as e:
+        logger.error(f"ig_content error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/ig-broadcast", methods=["POST", "GET"])
+def ig_broadcast():
+    """收到 IG 貼文連結後，在 LINE 官方帳號發送導流訊息給所有追蹤者。
+    參數：secret、ig_url（IG 貼文連結）、可選 title（主題）、image_url（預覽圖）
+    發送方式：優先 Broadcast；若失敗則改用 Push 逐一發送已知用戶。
+    """
+    secret = request.args.get("secret", "") or request.form.get("secret", "")
+    if secret != DAILY_GREETING_SECRET:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    ig_url = request.args.get("ig_url", "") or request.form.get("ig_url", "")
+    if not ig_url:
+        return jsonify({"error": "missing ig_url"}), 400
+
+    title = request.args.get("title", "") or request.form.get("title", "")
+    image_url = request.args.get("image_url", "") or request.form.get("image_url", "")
+    mode = request.args.get("mode", "broadcast") or request.form.get("mode", "broadcast")
+
+    # 若沒帶 title，嘗試讀取最近生成的主題
+    if not title:
+        try:
+            if os.path.exists(IG_CONTENT_FILE):
+                with open(IG_CONTENT_FILE, "r", encoding="utf-8") as f:
+                    title = json.load(f).get("topic", "")
+        except Exception:
+            pass
+
+    topic_line = f"\u672c\u65e5\u4e3b\u984c\uff1a{title}\n\n" if title else ""
+    promo_text = (
+        f"\u54c1\u724c\u77e5\u8b58\u65b0\u8cbc\u6587\u4e0a\u7dda \u2728\n\n"
+        f"{topic_line}"
+        f"\u5b8c\u6574\u5167\u5bb9\u5df2\u767c\u4f48\u5728 Instagram\uff0c"
+        f"\u9ede\u9032\u4f86\u770b\u770b\u4eca\u5929\u7684\u54c1\u724c\u601d\u8003 \ud83d\udc47\n"
+        f"{ig_url}\n\n"
+        f"\u5e02\u5834\u4e0d\u7f3a\u54c1\u724c\uff0c\u7f3a\u7684\u662f\u88ab\u8a18\u4f4f\u7684\u54c1\u724c\u3002"
+    )
+
+    messages = []
+    if image_url:
+        from linebot.v3.messaging import ImageMessage
+        messages.append(ImageMessage(original_content_url=image_url, preview_image_url=image_url))
+    messages.append(TextMessage(text=promo_text))
+
+    try:
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            if mode == "broadcast":
+                try:
+                    line_bot_api.broadcast(BroadcastRequest(messages=messages))
+                    logger.info(f"IG broadcast sent: {ig_url}")
+                    return jsonify({"success": True, "method": "broadcast", "ig_url": ig_url}), 200
+                except Exception as bc_err:
+                    logger.error(f"Broadcast failed, fallback to push: {bc_err}")
+
+            # Fallback：Push 逐一發送
+            known_users = load_known_users()
+            if ADMIN_LINE_USER_ID and ADMIN_LINE_USER_ID not in known_users:
+                known_users.append(ADMIN_LINE_USER_ID)
+            sent = 0
+            failed = 0
+            for uid in known_users:
+                try:
+                    line_bot_api.push_message(PushMessageRequest(to=uid, messages=messages))
+                    sent += 1
+                except Exception as pe:
+                    logger.error(f"Push failed for {uid}: {pe}")
+                    failed += 1
+            return jsonify({"success": True, "method": "push", "sent": sent, "failed": failed, "ig_url": ig_url}), 200
+
+    except Exception as e:
+        logger.error(f"ig_broadcast error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
