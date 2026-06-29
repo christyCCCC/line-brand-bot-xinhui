@@ -177,6 +177,7 @@ def get_session(user_id):
             "answers": {},
             "role": None,
             "history": [],
+            "service_code": None,
         }
     return user_sessions[user_id]
 
@@ -188,6 +189,7 @@ def reset_session(user_id):
         "answers": {},
         "role": None,
         "history": [],
+        "service_code": None,
     }
 
 
@@ -311,6 +313,179 @@ DIAGNOSIS_TRIGGERS = [
     "品牌診斷", "品牌分析", "品牌問卷", "開始診斷", "我想做品牌診斷",
     "品牌探索", "幫我分析", "品牌健檢",
     "start", "重新開始", "重來",
+]
+
+# ===== 六大服務數字選單引導流程 =====
+# 客戶輸入 01~06（或 1~6）時，觸發對應服務的引導式對話
+SERVICE_FLOWS = {
+    "01": {
+        "name": "品牌方向探索",
+        "intro": """品牌方向探索？看來你現在有點迷惘喔 \U0001F60F
+放心，迷路是找到對的路的第一步。
+
+很多時候，我們覺得品牌做不起來，不是因為產品不好，而是「方向」一開始就偏了。
+
+你目前覺得最大的卡點是什麼？
+A. 不知道自己跟別人差在哪
+B. 知道自己很好，但不知道怎麼說出來
+C. 什麼都想做，結果什麼都做不好
+
+（直接回覆 A、B 或 C，我幫你看看）""",
+        "followup": """懂了。這其實是很多品牌的通病，你並不孤單啦 \U0001F609
+
+真正的問題通常不在表面。我們的「品牌方向探索」會透過深度訪談和市場分析，幫你找出那個「只有你能做」的定位。
+
+與其自己在那邊瞎猜，不如我們直接聊聊？
+
+點這裡預約免費 30 分鐘諮詢，讓我聽聽你的故事：
+👉 {booking_url}
+
+期待跟你一起找到那個閃閃發光的定位 \u2728""",
+    },
+    "02": {
+        "name": "品牌升級與重構",
+        "intro": """喔？想做品牌升級與重構？
+看來你已經不是新手了，是有點故事的品牌呢 \U0001F60E
+
+品牌重構就像是老屋翻新，打掉重練很痛，但翻新後會很爽。
+
+你現在最想「翻新」哪個部分？
+A. 視覺跟不上現在的質感了
+B. 商業模式想轉型，但品牌形象卡住了
+C. 客群變了，以前的溝通方式不管用了
+
+（回覆 A、B 或 C，讓我了解一下你的狀況）""",
+        "followup": """看來是個大工程，但我最喜歡有挑戰性的案子了 \U0001F60F
+
+品牌升級不是換個 Logo 就好，而是從策略、商業模式到市場競爭力的全面重建。
+
+這部分文字說不清，我們需要好好坐下來拆解。
+
+幫我留個時間，我們來一場深度的「品牌健檢」：
+👉 {booking_url}
+
+準備好迎接全新的自己了嗎？\u2728""",
+    },
+    "03": {
+        "name": "AI 企業顧問",
+        "intro": """終於有人問到我的強項了！
+AI 企業顧問，這可是現在最聰明的選擇。
+
+你知道嗎？現在不用 AI 的企業，就像在用算盤跟別人用電腦比速度。
+
+你最想讓 AI 幫你解決什麼問題？
+A. 行銷內容產出太慢，想自動化
+B. 品牌策略沒靈感，需要 AI 當智囊
+C. 團隊不懂 AI，想導入 AI 系統
+
+（回覆 A、B 或 C，我看看怎麼幫你開外掛）""",
+        "followup": """聰明！這正是 AI 能幫你大幅省下時間和成本的地方 \U0001F4A1
+
+我們的「AI 企業顧問」不只教你用工具，而是幫你把 AI 整合進品牌策略和日常營運裡。
+
+想知道 AI 怎麼為你的企業量身打造專屬方案嗎？
+
+點這裡預約，我們來聊聊怎麼讓你的企業飛起來：
+👉 {booking_url}
+
+等你喔，未來的 AI 大師 \u2728""",
+    },
+    "04": {
+        "name": "創業陪跑系統",
+        "intro": """創業陪跑？看來你準備好要跳進這個坑了 \U0001F60F
+創業這條路很孤單，但有我陪你，就不會那麼可怕啦。
+
+你現在的進度到哪裡了？
+A. 只有點子，還沒開始
+B. 剛起步，但有點手忙腳亂
+C. 已經在做，但需要有人幫忙梳理商業模式
+
+（回覆 A、B 或 C，我看看你要從哪裡開始跑）""",
+        "followup": """收到！不管你在哪個階段，我都準備好要當你的神隊友了 \U0001F609
+
+我們的「創業陪跑系統」從公司設立、個人品牌到商業模式規劃，一路陪你打怪升級。
+
+創業第一步：找個對的夥伴聊聊。
+
+點這裡預約免費諮詢，讓我聽聽你的偉大計畫：
+👉 {booking_url}
+
+準備好一起衝了嗎？🚀""",
+    },
+    "05": {
+        "name": "海外品牌拓展",
+        "intro": """哇，眼光放得很遠喔！想出海了？\U0001F30D
+出國比賽可不是開玩笑的，水很深呢。
+
+你最想把品牌帶到哪裡去？
+A. 歐美市場
+B. 東南亞市場
+C. 其他，我就是想走出台灣
+
+（回覆 A、B 或 C，讓我看看你的野心有多大）""",
+        "followup": """很有企圖心，我喜歡 \U0001F60F
+
+每個市場的玩法都不一樣，直接把台灣的模式複製貼上通常會摔得很慘。
+
+我們的「海外品牌拓展」會幫你重新定位國際市場，制定專屬的海外策略。
+
+跨出海外的第一步，從跟我喝杯咖啡開始：
+👉 {booking_url}
+
+讓我們一起把品牌做到世界去吧！\u2728""",
+    },
+    "06": {
+        "name": "企業內訓 / 包班課程",
+        "intro": """企業內訓？看來你是個好老闆、好主管，想讓團隊一起升級 \U0001F44F
+
+一個人強不夠，一群人強才是真的強。
+
+你最想讓團隊學什麼？
+A. AI 品牌行銷實戰
+B. ChatGPT 商業應用
+C. 品牌思維建立
+
+（回覆 A、B 或 C，我幫你量身打造課程）""",
+        "followup": """太棒了！這正是現在企業最需要的火力支援 \U0001F525
+
+我們的課程不講空話，直接帶團隊實戰，保證上完課馬上能用。
+
+每個企業的需求都不同，我們需要聊聊細節才能為你客製化。
+
+點這裡預約討論，讓我們幫你的團隊開外掛：
+👉 {booking_url}
+
+期待在課堂上見到你們團隊喔！\u2728""",
+    },
+}
+
+# 數字輸入正規化：把 1~6、01~06、全形數字都對應到 01~06
+SERVICE_NUMBER_MAP = {
+    "1": "01", "01": "01", "\uff10\uff11": "01", "\uff11": "01",
+    "2": "02", "02": "02", "\uff10\uff12": "02", "\uff12": "02",
+    "3": "03", "03": "03", "\uff10\uff13": "03", "\uff13": "03",
+    "4": "04", "04": "04", "\uff10\uff14": "04", "\uff14": "04",
+    "5": "05", "05": "05", "\uff10\uff15": "05", "\uff15": "05",
+    "6": "06", "06": "06", "\uff10\uff16": "06", "\uff16": "06",
+}
+
+# 服務選單訊息（可在歡迎或客戶詢問服務時主動推送）
+SERVICE_MENU_MESSAGE = """輸入下方數字，即可快速了解對應服務內容 \u2728
+我會陪你一步步釐清方向，需要時也能安排專人為你深入分析。
+
+01｜品牌方向探索
+02｜品牌升級與重構
+03｜AI 企業顧問
+04｜創業陪跑系統
+05｜海外品牌拓展
+06｜企業內訓 / 包班課程
+
+期待與你一起，打造真正能被市場記住的品牌。"""
+
+# 服務選單觸發關鍵字
+MENU_TRIGGERS = [
+    "服務", "服務內容", "服務項目", "選單", "menu", "功能", "你們有什麼",
+    "方案", "課程",
 ]
 
 # ===== 預約觸發關鍵字 =====
@@ -668,6 +843,30 @@ def handle_message(event):
 
         # ===== 聊天模式 =====
         if state == "chat":
+            # 檢查是否輸入服務數字（01~06 / 1~6），觸發服務引導流程
+            if user_text in SERVICE_NUMBER_MAP:
+                service_code = SERVICE_NUMBER_MAP[user_text]
+                flow = SERVICE_FLOWS[service_code]
+                session["state"] = "service_flow"
+                session["service_code"] = service_code
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=flow["intro"])],
+                    )
+                )
+                return
+
+            # 檢查是否要看服務選單
+            if any(trigger in user_text for trigger in MENU_TRIGGERS):
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=SERVICE_MENU_MESSAGE)],
+                    )
+                )
+                return
+
             # 檢查是否觸發預約
             if any(trigger in user_text for trigger in BOOKING_TRIGGERS):
                 booking_url = get_booking_url()
@@ -715,6 +914,42 @@ def handle_message(event):
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
                     messages=[TextMessage(text=ai_response)],
+                )
+            )
+            return
+
+        # ===== 服務引導流程模式（輸入 01~06 後，等待客戶回覆 A/B/C）=====
+        elif state == "service_flow":
+            service_code = session.get("service_code", "01")
+            flow = SERVICE_FLOWS.get(service_code, SERVICE_FLOWS["01"])
+            booking_url = get_booking_url()
+
+            # 如果客戶又輸入其他服務數字，直接切換到那個服務的引導
+            if user_text in SERVICE_NUMBER_MAP:
+                new_code = SERVICE_NUMBER_MAP[user_text]
+                session["service_code"] = new_code
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=SERVICE_FLOWS[new_code]["intro"])],
+                    )
+                )
+                return
+
+            # 不管客戶回什麼（A/B/C 或自由文字），都給出 followup 並導向預約
+            followup_text = flow["followup"].replace("{booking_url}", booking_url)
+            # 記錄這段對話進歷史，之後回到聊天時 AI 能陣脈延續
+            session["history"].append({"role": "user", "content": f"（對 {flow['name']} 服務有興趣，回覆：{user_text}）"})
+            session["history"].append({"role": "assistant", "content": followup_text})
+            if len(session["history"]) > 20:
+                session["history"] = session["history"][-20:]
+            # 回到聊天模式，讓客戶能繼續自由提問，或輸入其他數字繼續探索
+            session["state"] = "chat"
+            session["service_code"] = None
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=followup_text)],
                 )
             )
             return
@@ -982,31 +1217,46 @@ def daily_greeting():
         )
         greeting = response.choices[0].message.content.strip()
 
-        # 改用 Push Message 逐一發送給所有已知用戶（繞過 Broadcast 月度限制）
-        known_users = load_known_users()
-        # 確保 ADMIN_LINE_USER_ID 也在列表中
-        if ADMIN_LINE_USER_ID and ADMIN_LINE_USER_ID not in known_users:
-            known_users.append(ADMIN_LINE_USER_ID)
-
-        sent_count = 0
-        failed_count = 0
+        # 優先使用 Broadcast 發送給「所有好友」；若失敗（如月度限額）再退回 Push 逐一發送
+        messages = [TextMessage(text=greeting)]
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            for uid in known_users:
-                try:
-                    line_bot_api.push_message(
-                        PushMessageRequest(
-                            to=uid,
-                            messages=[TextMessage(text=greeting)]
-                        )
-                    )
-                    sent_count += 1
-                except Exception as push_err:
-                    logger.error(f"Push failed for {uid}: {push_err}")
-                    failed_count += 1
+            try:
+                line_bot_api.broadcast(BroadcastRequest(messages=messages))
+                logger.info(f"Brand knowledge greeting BROADCAST to all friends (topic: {today_topic['topic']})")
+                return jsonify({"success": True, "method": "broadcast", "topic": today_topic['topic'], "greeting": greeting}), 200
+            except Exception as bc_err:
+                # 月度限額（429）等情況：明確回報，並退回 Push 給已知用戶
+                err_text = str(bc_err)
+                logger.error(f"Broadcast failed: {err_text}; fallback to push")
+                is_quota = "429" in err_text or "monthly limit" in err_text.lower() or "quota" in err_text.lower()
 
-        logger.info(f"Brand knowledge greeting sent via Push (topic: {today_topic['topic']}): sent={sent_count}, failed={failed_count}")
-        return jsonify({"success": True, "topic": today_topic['topic'], "greeting": greeting, "sent": sent_count, "failed": failed_count, "total_users": len(known_users)}), 200
+                known_users = load_known_users()
+                if ADMIN_LINE_USER_ID and ADMIN_LINE_USER_ID not in known_users:
+                    known_users.append(ADMIN_LINE_USER_ID)
+                sent_count = 0
+                failed_count = 0
+                for uid in known_users:
+                    try:
+                        line_bot_api.push_message(
+                            PushMessageRequest(to=uid, messages=messages)
+                        )
+                        sent_count += 1
+                    except Exception as push_err:
+                        logger.error(f"Push failed for {uid}: {push_err}")
+                        failed_count += 1
+
+                return jsonify({
+                    "success": True if sent_count > 0 else False,
+                    "method": "push_fallback",
+                    "quota_exceeded": is_quota,
+                    "topic": today_topic['topic'],
+                    "greeting": greeting,
+                    "sent": sent_count,
+                    "failed": failed_count,
+                    "total_users": len(known_users),
+                    "broadcast_error": err_text
+                }), (429 if is_quota else 200)
 
     except Exception as e:
         logger.error(f"Daily greeting error: {e}")
