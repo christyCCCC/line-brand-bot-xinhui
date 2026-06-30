@@ -492,9 +492,39 @@ MENU_TRIGGERS = [
 
 # ===== 預約觸發關鍵字 =====
 BOOKING_TRIGGERS = [
-    "預約", "我要預約", "預約諮詢", "想預約", "booking",
-    "我想預約", "預約時間", "約時間", "想諮詢",
+    "預約", "我要預約", "預約諒詢", "想預約", "booking",
+    "我想預約", "預約時間", "約時間", "想諒詢",
 ]
+
+# ===== IG / Instagram 觸發關鍵字 =====
+# 包含類（只要訊息出現這些詞就觸發）
+IG_TRIGGERS_CONTAIN = [
+    "instagram", "粉絲團", "社群帳號", "追蹤你們", "關注你們",
+    "ig連結", "ig帳號", "ig連結", "你們ig", "你們的ig", "你們有ig嗎",
+]
+# 精確等於類（避免英文句中的 ig 詍觸發，需整句幾乎只有 ig）
+IG_TRIGGERS_EXACT = [
+    "ig", "IG", "Ig", "iG",
+]
+
+
+def is_ig_query(text):
+    """判斷客戶是否在問 IG / Instagram"""
+    t = text.strip()
+    low = t.lower()
+    if any(k in low for k in IG_TRIGGERS_CONTAIN):
+        return True
+    # 短訊息且幾乎只有 ig 兩字時才算（避免誤觸發）
+    if low.replace(" ", "") in IG_TRIGGERS_EXACT:
+        return True
+    return False
+
+# IG 引導訊息：不直接貼連結，而是引導客戶點下方選單的 IG 按鈕
+IG_GUIDE_MESSAGE = """想跟上我們的最新品牌思考嗎？歡迎追蹤我們的 Instagram ✨
+
+點下方選單的「Instagram / IG」按鈕，就會直接帶你到我們的 IG 頁面囉～
+
+那裡有我平常分享的品牌知識與實戰心法，不定期還有很多干貨，記得按追蹤不錯過 😉"""
 
 ROLE_SELECT_MESSAGE = """好的，讓我們開始品牌靈魂探索 ✨
 
@@ -896,6 +926,16 @@ def handle_message(event):
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
                         messages=[TextMessage(text=booking_msg)],
+                    )
+                )
+                return
+
+            # 檢查是否詢問 IG / Instagram，引導點下方選單的 IG 按鈕
+            if is_ig_query(user_text):
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=IG_GUIDE_MESSAGE)],
                     )
                 )
                 return
