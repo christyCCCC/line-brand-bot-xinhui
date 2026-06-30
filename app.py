@@ -837,6 +837,17 @@ def health():
     return "OK", 200
 
 
+@app.route("/version", methods=["GET"])
+def version():
+    """回傳版本資訊，用於確認線上是否為最新版。"""
+    return jsonify({
+        "version": "2026-06-30-v3-service-menu-ig",
+        "features": ["service_number_map", "ig_guide", "fallback_menu"],
+        "service_codes": list(SERVICE_FLOWS.keys()),
+        "number_map_sample": {k: SERVICE_NUMBER_MAP[k] for k in ["01", "1", "05"] if k in SERVICE_NUMBER_MAP},
+    }), 200
+
+
 @handler.add(FollowEvent)
 def handle_follow(event):
     user_id = event.source.user_id
