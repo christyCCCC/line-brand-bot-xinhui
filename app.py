@@ -15,7 +15,7 @@ from flask import Flask, request, abort, render_template, jsonify
 
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent, JoinEvent
+from linebot.v3.webhooks import MessageEvent, TextMessageContent, StickerMessageContent, FollowEvent, JoinEvent
 from linebot.v3.messaging import (
     Configuration,
     ApiClient,
@@ -841,8 +841,8 @@ def health():
 def version():
     """回傳版本資訊，用於確認線上是否為最新版。"""
     return jsonify({
-        "version": "2026-07-01-v4-convo-forward",
-        "features": ["service_number_map", "ig_guide", "fallback_menu", "convo_forward_to_admin"],
+        "version": "2026-07-01-v5-sticker-and-reply-fallback",
+        "features": ["service_number_map", "ig_guide", "fallback_menu", "convo_forward_to_admin", "sticker_reply", "reply_fallback_push"],
         "service_codes": list(SERVICE_FLOWS.keys()),
         "number_map_sample": {k: SERVICE_NUMBER_MAP[k] for k in ["01", "1", "05"] if k in SERVICE_NUMBER_MAP},
     }), 200
@@ -928,9 +928,11 @@ class ReplyCapturingApi:
     """包裝 MessagingApi，攔截 reply_message / push_message 的文字內容，
     以便在處理結束後把 Bot 的回覆副本轉發給管理者。其餘方法一律透傳。"""
 
-    def __init__(self, inner):
+    def __init__(self, inner, push_target=None):
         self._inner = inner
         self.captured_replies = []
+        # 當 reply 失敗（如 reply_token 過期）時，用這個目標 push 補送
+        self.push_target = push_target
 
     def _capture(self, req):
         try:
@@ -943,7 +945,21 @@ class ReplyCapturingApi:
 
     def reply_message(self, req, *args, **kwargs):
         self._capture(req)
-        return self._inner.reply_message(req, *args, **kwargs)
+        try:
+            return self._inner.reply_message(req, *args, **kwargs)
+        except Exception as e:
+            # reply 失敗（最常見：冷啟動導致 reply_token 過期），自動改用 push 補送，避免已讀不回
+            logger.error(f"reply_message failed, fallback to push: {e}")
+            if self.push_target:
+                try:
+                    msgs = getattr(req, "messages", []) or []
+                    self._inner.push_message(
+                        PushMessageRequest(to=self.push_target, messages=msgs)
+                    )
+                    logger.info("Fallback push_message succeeded")
+                except Exception as e2:
+                    logger.error(f"Fallback push_message also failed: {e2}")
+            return None
 
     def push_message(self, req, *args, **kwargs):
         # push 給客戶的內容（如品牌分析報告）也一併記錄，但不記錄轉發給管理者本身的訊息
@@ -988,7 +1004,7 @@ def handle_message(event):
     with ApiClient(configuration) as api_client:
         _raw_api = MessagingApi(api_client)
         # 包裝：攔截所有回覆內容，以便結束時轉發副本給管理者
-        line_bot_api = ReplyCapturingApi(_raw_api)
+        line_bot_api = ReplyCapturingApi(_raw_api, push_target=push_target)
         try:
             _handle_message_core(event, line_bot_api, session, source_type, user_id, user_text, push_target)
         finally:
@@ -1257,6 +1273,50 @@ def handle_join(event):
             )
     except Exception as e:
         logger.error(f"Error in handle_join: {e}")
+
+
+# ===== 貼圖訊息處理 =====
+# 客戶傳貼圖時，不要沉默，給一句俰皮又自然的回應，並帶出服務引導
+STICKER_REPLIES = [
+    "哈，這張貼圖我喜歡 😎 看來你心情不錯嘛～\n想聊聊品牌的事嗎？直接跟我說就好 ✨",
+    "收到你的貼圖啦 😄\n我是心惠，專門幫人把品牌想清楚、說漂亮。\n你現在最想解決的品牌問題是什麼？",
+    "貼圖收到 💛 但光比手勢我猜不到你的心思喔～\n直接打字告訴我，或輸入下方數字，我馬上幫你介紹：\n01｜品牌方向探索\n02｜品牌升級與重構\n03｜AI企業顧問\n04｜創業陪跑系統\n05｜海外品牌拓展\n06｜企業內訓／包班課程",
+]
+
+
+@handler.add(MessageEvent, message=StickerMessageContent)
+def handle_sticker(event):
+    """客戶傳貼圖時的回應（避免已讀不回）。"""
+    try:
+        source_type = event.source.type
+        user_id = getattr(event.source, "user_id", None)
+        if source_type == "group":
+            push_target = event.source.group_id
+        elif source_type == "room":
+            push_target = event.source.room_id
+        else:
+            push_target = user_id
+    except Exception as e:
+        logger.error(f"Error in handle_sticker init: {e}")
+        return
+
+    import random as _random
+    reply_text = _random.choice(STICKER_REPLIES)
+
+    with ApiClient(configuration) as api_client:
+        _raw_api = MessagingApi(api_client)
+        line_bot_api = ReplyCapturingApi(_raw_api, push_target=push_target)
+        try:
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=reply_text)],
+                )
+            )
+        finally:
+            forward_conversation_to_admin(
+                _raw_api, source_type, user_id, "（傳了一張貼圖）", line_bot_api.captured_replies
+            )
 
 
 # ===== 每日早安祝福功能 =====
