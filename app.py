@@ -841,8 +841,8 @@ def health():
 def version():
     """回傳版本資訊，用於確認線上是否為最新版。"""
     return jsonify({
-        "version": "2026-06-30-v3-service-menu-ig",
-        "features": ["service_number_map", "ig_guide", "fallback_menu"],
+        "version": "2026-07-01-v4-convo-forward",
+        "features": ["service_number_map", "ig_guide", "fallback_menu", "convo_forward_to_admin"],
         "service_codes": list(SERVICE_FLOWS.keys()),
         "number_map_sample": {k: SERVICE_NUMBER_MAP[k] for k in ["01", "1", "05"] if k in SERVICE_NUMBER_MAP},
     }), 200
@@ -861,6 +861,102 @@ def handle_follow(event):
                 messages=[TextMessage(text=WELCOME_MESSAGE)],
             )
         )
+
+
+# ===== 對話副本轉發給管理者 =====
+# 讓管理者在維持 Bot 模式的同時，也能在自己的 LINE 看到「客戶說了什麼 + Bot 回了什麼」
+CONVO_FORWARD_ENABLED = os.environ.get("CONVO_FORWARD_ENABLED", "true").lower() != "false"
+
+
+def _get_display_name(line_bot_api, user_id):
+    """嘗試取得客戶的顯示名稱，失敗則回傳簡短 ID。"""
+    try:
+        if user_id:
+            profile = line_bot_api.get_profile(user_id)
+            return getattr(profile, "display_name", None) or (user_id[:8] + "…")
+    except Exception as e:
+        logger.info(f"get_profile failed (可能未加好友或群組): {e}")
+    return (user_id[:8] + "…") if user_id else "未知用戶"
+
+
+def forward_conversation_to_admin(line_bot_api, source_type, user_id, user_text, bot_replies):
+    """把一輪對話（客戶訊息 + Bot 回覆）副本推播給管理者的 LINE。
+
+    - 只在有設定 ADMIN_LINE_USER_ID 時執行
+    - 不轉發管理者自己傳的訊息（避免自我循環）
+    - 群組/聊天室訊息也會標註來源
+    """
+    try:
+        if not CONVO_FORWARD_ENABLED:
+            return
+        if not ADMIN_LINE_USER_ID:
+            return
+        # 不轉發管理者自己與 Bot 的對話（避免無限循環與洗版）
+        if user_id and user_id == ADMIN_LINE_USER_ID:
+            return
+        if not bot_replies:
+            return
+
+        name = _get_display_name(line_bot_api, user_id)
+        source_label = {"user": "一對一", "group": "群組", "room": "聊天室"}.get(source_type, source_type)
+        reply_joined = "\n".join(bot_replies).strip()
+        # 控制長度，避免超過單則訊息上限
+        if len(reply_joined) > 1500:
+            reply_joined = reply_joined[:1500] + "…（略）"
+        stamp = datetime.now().strftime("%m/%d %H:%M")
+
+        digest = (
+            f"💬 對話副本（{source_label}）｜{stamp}\n"
+            f"👤 {name}\n"
+            f"────────────\n"
+            f"對方：{user_text}\n\n"
+            f"心惠：{reply_joined}"
+        )
+        line_bot_api.push_message(
+            PushMessageRequest(
+                to=ADMIN_LINE_USER_ID,
+                messages=[TextMessage(text=digest)],
+            )
+        )
+        logger.info("Conversation copy forwarded to admin")
+    except Exception as e:
+        # 轉發失敗不可影響對客戶的正常回覆
+        logger.error(f"forward_conversation_to_admin error: {e}")
+
+
+class ReplyCapturingApi:
+    """包裝 MessagingApi，攔截 reply_message / push_message 的文字內容，
+    以便在處理結束後把 Bot 的回覆副本轉發給管理者。其餘方法一律透傳。"""
+
+    def __init__(self, inner):
+        self._inner = inner
+        self.captured_replies = []
+
+    def _capture(self, req):
+        try:
+            for m in getattr(req, "messages", []) or []:
+                text = getattr(m, "text", None)
+                if text:
+                    self.captured_replies.append(text)
+        except Exception:
+            pass
+
+    def reply_message(self, req, *args, **kwargs):
+        self._capture(req)
+        return self._inner.reply_message(req, *args, **kwargs)
+
+    def push_message(self, req, *args, **kwargs):
+        # push 給客戶的內容（如品牌分析報告）也一併記錄，但不記錄轉發給管理者本身的訊息
+        try:
+            if getattr(req, "to", None) != ADMIN_LINE_USER_ID:
+                self._capture(req)
+        except Exception:
+            pass
+        return self._inner.push_message(req, *args, **kwargs)
+
+    def __getattr__(self, name):
+        # 其餘方法（get_profile、broadcast 等）透傳給原生 API
+        return getattr(self._inner, name)
 
 
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -890,11 +986,25 @@ def handle_message(event):
         return
 
     with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
+        _raw_api = MessagingApi(api_client)
+        # 包裝：攔截所有回覆內容，以便結束時轉發副本給管理者
+        line_bot_api = ReplyCapturingApi(_raw_api)
+        try:
+            _handle_message_core(event, line_bot_api, session, source_type, user_id, user_text, push_target)
+        finally:
+            # 不管正常結束或中途 return，都把這一輪對話副本轉發給管理者
+            forward_conversation_to_admin(
+                _raw_api, source_type, user_id, user_text, line_bot_api.captured_replies
+            )
 
+
+def _handle_message_core(event, line_bot_api, session, source_type, user_id, user_text, push_target):
+    """實際的訊息處理邏輯（原 handle_message 主體）。
+    line_bot_api 為 ReplyCapturingApi 包裝後的實例，已能攔截回覆內容。"""
+    if True:
         state = session["state"]
 
-        # ===== 聊天模式 =====
+        # ===== 聚天模式 =====
         if state == "chat":
             # 檢查是否輸入服務數字（01~06 / 1~6），觸發服務引導流程
             if user_text in SERVICE_NUMBER_MAP:

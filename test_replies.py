@@ -4,6 +4,7 @@
 import os
 os.environ.setdefault('LINE_CHANNEL_SECRET', 't')
 os.environ.setdefault('LINE_CHANNEL_ACCESS_TOKEN', 't')
+os.environ.setdefault('ADMIN_LINE_USER_ID', 'ADMIN_TEST_ID')
 
 import importlib.util
 spec = importlib.util.spec_from_file_location('app', '/home/ubuntu/line-brand-bot/app.py')
@@ -13,13 +14,21 @@ spec.loader.exec_module(app)
 # 捕捉所有送出的回覆
 sent = []
 
+class FakeProfile:
+    def __init__(self, name):
+        self.display_name = name
+
 class FakeMessagingApi:
     def reply_message(self, req):
         for m in req.messages:
             sent.append(getattr(m, 'text', str(m)))
     def push_message(self, req):
+        to = getattr(req, 'to', None)
+        prefix = '[FWD->ADMIN] ' if to == 'ADMIN_TEST_ID' else '[PUSH] '
         for m in req.messages:
-            sent.append('[PUSH] ' + getattr(m, 'text', str(m)))
+            sent.append(prefix + getattr(m, 'text', str(m)))
+    def get_profile(self, user_id):
+        return FakeProfile('測試客戶')
 
 class FakeApiClient:
     def __enter__(self): return self
